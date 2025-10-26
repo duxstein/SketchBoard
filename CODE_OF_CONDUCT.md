@@ -42,7 +42,7 @@ This Code of Conduct applies to all project spaces — including GitHub issues, 
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the maintainers at:
 
-📧 **opensource.sketchboard@gmail.com** (replace with your preferred contact)
+📧 **sportswatch001@gmail.com** (replace with your preferred contact)
 
 All complaints will be reviewed fairly and kept confidential.
 
