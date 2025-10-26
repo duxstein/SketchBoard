@@ -13,7 +13,7 @@
   <a href="https://github.com/AbhishekMishra-OpenSource/SketchBoard/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" />
   </a>
-  <a href="https://github.com/AbhishekMishra-OpenSource/SketchBoard/stargazers">
+  <a href="(https://github.com/duxstein/SketchBoard)">
     <img src="https://img.shields.io/github/stars/AbhishekMishra-OpenSource/SketchBoard?style=social" alt="GitHub Stars" />
   </a>
   <a href="https://github.com/AbhishekMishra-OpenSource/SketchBoard/graphs/contributors">
