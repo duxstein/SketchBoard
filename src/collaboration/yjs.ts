@@ -9,6 +9,7 @@ import * as Y from 'yjs';
 import { Awareness } from 'y-protocols/awareness';
 import type { Shape, PenShape } from '@/canvas/types';
 import type { TransportProvider, ConnectionStatus } from './transport';
+import { PersistenceManager } from './persistence';
 
 /**
  * Yjs Document Manager
@@ -20,6 +21,7 @@ export class YjsDocument {
   private doc: Y.Doc;
   private shapesMap: Y.Map<Y.Map<unknown>>;
   private awareness: Awareness;
+  private persistence: PersistenceManager;
   private transport: TransportProvider | null = null;
   private status: ConnectionStatus = 'disconnected';
   private onStatusChange?: (status: ConnectionStatus) => void;
@@ -35,6 +37,9 @@ export class YjsDocument {
 
     // Create awareness for ephemeral presence data
     this.awareness = new Awareness(this.doc);
+
+    // Create persistence manager
+    this.persistence = new PersistenceManager(this.doc);
 
     // Listen for local changes (for optimistic updates)
     this.shapesMap.observe(this.handleShapesChange.bind(this));
@@ -108,6 +113,16 @@ export class YjsDocument {
   }
 
   /**
+   * Initialize persistence
+   *
+   * Restores document state from IndexedDB and sets up auto-save.
+   * Should be called before connecting to transport.
+   */
+  async initializePersistence(): Promise<void> {
+    await this.persistence.initialize();
+  }
+
+  /**
    * Connect to transport provider
    *
    * @param transport - Transport provider instance
@@ -156,6 +171,16 @@ export class YjsDocument {
     }
     this.status = 'disconnected';
     this.onStatusChange?.('disconnected');
+  }
+
+  /**
+   * Cleanup
+   *
+   * Disconnects transport and destroys persistence.
+   */
+  destroy(): void {
+    this.disconnect();
+    this.persistence.destroy();
   }
 
   /**
