@@ -21,6 +21,7 @@ import {
   isTextShape,
 } from './types';
 import type { Viewport } from './viewport';
+import { cullShapes } from './culling';
 
 /**
  * Render an array of shapes to a canvas context
@@ -34,14 +35,27 @@ import type { Viewport } from './viewport';
  * @param ctx - Canvas 2D rendering context (will be transformed by this function)
  * @param viewport - Viewport instance for coordinate transformations
  * @param shapes - Array of shapes to render (in world coordinates)
+ * @param canvasSize - Canvas size in screen pixels (for culling calculation)
+ * @param enableCulling - Whether to enable viewport culling (default: true)
  *
  * Side effects: Only draws to canvas context (no state mutations)
  */
 export function renderShapes(
   ctx: CanvasRenderingContext2D,
   viewport: Viewport,
-  shapes: Shape[]
+  shapes: Shape[],
+  canvasSize?: { width: number; height: number },
+  enableCulling: boolean = true
 ): void {
+  // Viewport culling: filter out shapes not visible in viewport
+  // Tradeoff: Adds computation overhead but significantly reduces overdraw
+  // For small shape counts (<100), culling overhead may exceed rendering cost
+  // For large shape counts (>1000), culling provides significant performance gain
+  const shapesToRender =
+    enableCulling && shapes.length > 50
+      ? cullShapes(shapes, viewport, canvasSize)
+      : shapes;
+
   // Save context state before rendering
   ctx.save();
 
@@ -52,7 +66,7 @@ export function renderShapes(
 
   // Render each shape in order
   // Order matters for z-index (later shapes appear on top)
-  for (const shape of shapes) {
+  for (const shape of shapesToRender) {
     renderShape(ctx, shape);
   }
 

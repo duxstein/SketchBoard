@@ -52,6 +52,7 @@ export class PresenceManager {
   private localPresence: PresenceData;
   private onPresenceChangeCallback?: (presence: PresenceMap) => void;
   private updateInterval: number | null = null;
+  private awarenessChangeHandler: () => void;
 
   constructor(awareness: Awareness, userId: string) {
     this.awareness = awareness;
@@ -68,8 +69,11 @@ export class PresenceManager {
     // Set initial awareness state
     this.awareness.setLocalStateField('presence', this.localPresence);
 
+    // Bind handler once so it can be properly removed
+    this.awarenessChangeHandler = this.handleAwarenessChange.bind(this);
+
     // Listen for remote presence changes
-    this.awareness.on('change', this.handleAwarenessChange.bind(this));
+    this.awareness.on('change', this.awarenessChangeHandler);
 
     // Throttle cursor updates (don't spam network)
     this.startCursorUpdateLoop();
@@ -168,6 +172,7 @@ export class PresenceManager {
    */
   destroy(): void {
     this.stopCursorUpdateLoop();
+    this.awareness.off('change', this.awarenessChangeHandler);
     this.awareness.setLocalStateField('presence', null);
     this.onPresenceChangeCallback = undefined;
   }

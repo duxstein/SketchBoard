@@ -45,19 +45,11 @@ export function useCanvas(options?: UseCanvasOptions): UseCanvasReturn {
     renderer.init(canvas);
     rendererRef.current = renderer;
 
-    // Listen for viewport changes
-    const viewport = renderer.getViewport();
-    const checkViewport = () => {
-      const state = viewport.getState();
-      onViewportChangeRef.current?.(state);
-    };
-
-    // Poll viewport state (viewport changes happen outside React)
-    // This is acceptable because viewport changes are infrequent
-    const intervalId = setInterval(checkViewport, 100);
+    // Note: Viewport changes are now event-driven via updateViewport calls
+    // No polling needed - viewport state is updated explicitly when changed
+    // This eliminates unnecessary re-renders from polling
 
     return () => {
-      clearInterval(intervalId);
       renderer.destroy();
       rendererRef.current = null;
     };

@@ -5,7 +5,7 @@
  * Keyboard shortcuts prioritized per PRD Section 8.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useToolStore } from '@/store/tool';
 import { toolRegistry } from '@/tools/registry';
 
@@ -19,6 +19,9 @@ export function Toolbar() {
   const activeToolId = useToolStore(state => state.activeToolId);
   const setActiveTool = useToolStore(state => state.setActiveTool);
 
+  // Memoize tools list to avoid re-computing on every render
+  const tools = useMemo(() => toolRegistry.getAll(), []);
+
   // Set up keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -31,7 +34,6 @@ export function Toolbar() {
       }
 
       // Check for tool shortcuts
-      const tools = toolRegistry.getAll();
       for (const tool of tools) {
         if (
           tool.shortcut &&
@@ -48,10 +50,7 @@ export function Toolbar() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [setActiveTool]);
-
-  // Get all tools for display
-  const tools = toolRegistry.getAll();
+  }, [setActiveTool, tools]);
 
   return (
     <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">

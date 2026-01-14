@@ -29,9 +29,16 @@ export class PersistenceManager {
   private autoSaveInterval: number | null = null;
   private pendingUpdate: Uint8Array | null = null;
   private isInitialized = false;
+  private beforeUnloadHandler: () => void;
+  private visibilityChangeHandler: () => void;
+  private updateHandler: () => void;
 
   constructor(doc: Y.Doc) {
     this.doc = doc;
+    // Bind handlers once so they can be properly removed
+    this.beforeUnloadHandler = this.saveSync.bind(this);
+    this.visibilityChangeHandler = this.handleVisibilityChange.bind(this);
+    this.updateHandler = this.handleDocumentUpdate.bind(this);
   }
 
   /**
@@ -121,6 +128,13 @@ export class PersistenceManager {
    */
   destroy(): void {
     this.stopAutoSave();
+    // Remove event listeners
+    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+    document.removeEventListener(
+      'visibilitychange',
+      this.visibilityChangeHandler
+    );
+    this.doc.off('update', this.updateHandler);
     if (this.db) {
       this.db.close();
       this.db = null;
@@ -164,10 +178,7 @@ export class PersistenceManager {
    */
   private setupAutoSave(): void {
     // Listen for document updates
-    this.doc.on('update', () => {
-      // Mark that we have pending changes
-      this.pendingUpdate = new Uint8Array([1]); // Dummy value, just a flag
-    });
+    this.doc.on('update', this.updateHandler);
 
     // Auto-save every 2 seconds
     this.autoSaveInterval = window.setInterval(() => {
@@ -177,17 +188,27 @@ export class PersistenceManager {
     }, 2000);
 
     // Save on page unload (synchronous for reliability)
-    window.addEventListener('beforeunload', () => {
-      // Use synchronous save for beforeunload
-      this.saveSync();
-    });
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
 
     // Save on visibility change (tab hidden)
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.pendingUpdate) {
-        this.save();
-      }
-    });
+    document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+  }
+
+  /**
+   * Handle document update
+   */
+  private handleDocumentUpdate(): void {
+    // Mark that we have pending changes
+    this.pendingUpdate = new Uint8Array([1]); // Dummy value, just a flag
+  }
+
+  /**
+   * Handle visibility change
+   */
+  private handleVisibilityChange(): void {
+    if (document.hidden && this.pendingUpdate) {
+      this.save();
+    }
   }
 
   /**

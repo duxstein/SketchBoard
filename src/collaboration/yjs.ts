@@ -26,6 +26,8 @@ export class YjsDocument {
   private status: ConnectionStatus = 'disconnected';
   private onStatusChange?: (status: ConnectionStatus) => void;
   private onShapeChange?: (shapes: Map<string, Shape>) => void;
+  private shapesChangeHandler: () => void;
+  private documentUpdateHandler: (update: Uint8Array, origin: unknown) => void;
 
   constructor() {
     // Create Yjs document
@@ -41,11 +43,15 @@ export class YjsDocument {
     // Create persistence manager
     this.persistence = new PersistenceManager(this.doc);
 
+    // Bind handlers once so they can be properly removed
+    this.shapesChangeHandler = this.handleShapesChange.bind(this);
+    this.documentUpdateHandler = this.handleDocumentUpdate.bind(this);
+
     // Listen for local changes (for optimistic updates)
-    this.shapesMap.observe(this.handleShapesChange.bind(this));
+    this.shapesMap.observe(this.shapesChangeHandler);
 
     // Listen for document updates (for remote changes)
-    this.doc.on('update', this.handleDocumentUpdate.bind(this));
+    this.doc.on('update', this.documentUpdateHandler);
   }
 
   /**
@@ -177,9 +183,13 @@ export class YjsDocument {
    * Cleanup
    *
    * Disconnects transport and destroys persistence.
+   * Removes all event listeners to prevent memory leaks.
    */
   destroy(): void {
     this.disconnect();
+    // Remove Yjs observers
+    this.shapesMap.unobserve(this.shapesChangeHandler);
+    this.doc.off('update', this.documentUpdateHandler);
     this.persistence.destroy();
   }
 

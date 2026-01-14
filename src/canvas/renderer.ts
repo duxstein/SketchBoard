@@ -16,9 +16,12 @@ export class Renderer {
   private renderCallbacks: Set<RenderCallback> = new Set();
   private devicePixelRatio: number = 1;
   private isDirty: boolean = true;
+  private resizeHandler: () => void;
 
   constructor(viewport?: Viewport) {
     this.viewport = viewport ?? new Viewport();
+    // Bind resize handler once so it can be properly removed
+    this.resizeHandler = this.handleResize.bind(this);
   }
 
   /**
@@ -37,7 +40,7 @@ export class Renderer {
 
     // Handle resize
     this.handleResize();
-    window.addEventListener('resize', () => this.handleResize());
+    window.addEventListener('resize', this.resizeHandler);
 
     // Start render loop
     this.startRenderLoop();
@@ -48,7 +51,7 @@ export class Renderer {
    */
   destroy(): void {
     this.stopRenderLoop();
-    window.removeEventListener('resize', () => this.handleResize());
+    window.removeEventListener('resize', this.resizeHandler);
     this.renderCallbacks.clear();
     this.canvas = null;
     this.ctx = null;
