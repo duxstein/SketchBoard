@@ -6,6 +6,7 @@
  */
 
 import * as Y from 'yjs';
+import { Awareness } from 'y-protocols/awareness';
 import type { Shape, PenShape } from '@/canvas/types';
 import type { TransportProvider, ConnectionStatus } from './transport';
 
@@ -18,6 +19,7 @@ import type { TransportProvider, ConnectionStatus } from './transport';
 export class YjsDocument {
   private doc: Y.Doc;
   private shapesMap: Y.Map<Y.Map<unknown>>;
+  private awareness: Awareness;
   private transport: TransportProvider | null = null;
   private status: ConnectionStatus = 'disconnected';
   private onStatusChange?: (status: ConnectionStatus) => void;
@@ -31,6 +33,9 @@ export class YjsDocument {
     // Structure: shapesMap.get(shapeId) -> Y.Map with shape properties
     this.shapesMap = this.doc.getMap('shapes');
 
+    // Create awareness for ephemeral presence data
+    this.awareness = new Awareness(this.doc);
+
     // Listen for local changes (for optimistic updates)
     this.shapesMap.observe(this.handleShapesChange.bind(this));
 
@@ -43,6 +48,15 @@ export class YjsDocument {
    */
   getDoc(): Y.Doc {
     return this.doc;
+  }
+
+  /**
+   * Get the Yjs awareness instance
+   *
+   * Used for ephemeral presence data (cursors, user info).
+   */
+  getAwareness(): Awareness {
+    return this.awareness;
   }
 
   /**
@@ -126,6 +140,10 @@ export class YjsDocument {
     // Send initial state to transport
     const initialUpdate = Y.encodeStateAsUpdate(this.doc);
     transport.sendUpdate(initialUpdate);
+
+    // Note: Awareness updates are typically handled by the transport provider
+    // (e.g., y-websocket handles awareness separately)
+    // If your transport supports awareness, sync it here
   }
 
   /**
