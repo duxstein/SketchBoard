@@ -2,186 +2,175 @@
  * Canvas Renderer
  *
  * Core rendering engine using Canvas API.
- * Must operate independently of React lifecycle.
+ * DPI-safe, viewport-correct, React-independent.
  */
 
-import type { ViewportState, RenderCallback, CanvasSize } from './types';
-import { Viewport } from './viewport';
+import type { ViewportState, RenderCallback, CanvasSize } from './types'
+import { Viewport } from './viewport'
 
 export class Renderer {
-  private canvas: HTMLCanvasElement | null = null;
-  private ctx: CanvasRenderingContext2D | null = null;
-  private viewport: Viewport;
-  private animationFrameId: number | null = null;
-  private renderCallbacks: Set<RenderCallback> = new Set();
-  private devicePixelRatio: number = 1;
-  private isDirty: boolean = true;
-  private resizeHandler: () => void;
+  private canvas: HTMLCanvasElement | null = null
+  private ctx: CanvasRenderingContext2D | null = null
+  private viewport: Viewport
+  private rafId: number | null = null
+  private callbacks = new Set<RenderCallback>()
+  private dpr = 1
+  private resizeHandler: () => void
 
   constructor(viewport?: Viewport) {
-    this.viewport = viewport ?? new Viewport();
-    // Bind resize handler once so it can be properly removed
-    this.resizeHandler = this.handleResize.bind(this);
+    this.viewport = viewport ?? new Viewport()
+    this.resizeHandler = this.handleResize.bind(this)
   }
 
-  /**
-   * Initialize the renderer with a canvas element
-   */
+  /* ------------------------------------------------------------------ */
+  /* Lifecycle                                                          */
+  /* ------------------------------------------------------------------ */
+
   init(canvas: HTMLCanvasElement): void {
-    this.canvas = canvas;
-    const ctx = canvas.getContext('2d', { alpha: false });
-    if (!ctx) {
-      throw new Error('Failed to get 2D rendering context');
-    }
-    this.ctx = ctx;
+    this.canvas = canvas
 
-    // Get device pixel ratio for high-DPI support
-    this.devicePixelRatio = window.devicePixelRatio || 1;
+    const ctx = canvas.getContext('2d', { alpha: false })
+    if (!ctx) throw new Error('2D context not available')
+    this.ctx = ctx
 
-    // Handle resize
-    this.handleResize();
-    window.addEventListener('resize', this.resizeHandler);
+    this.dpr = window.devicePixelRatio || 1
 
-    // Start render loop
-    this.startRenderLoop();
+    this.handleResize()
+    window.addEventListener('resize', this.resizeHandler)
+
+    this.start()
   }
 
-  /**
-   * Cleanup renderer
-   */
   destroy(): void {
-    this.stopRenderLoop();
-    window.removeEventListener('resize', this.resizeHandler);
-    this.renderCallbacks.clear();
-    this.canvas = null;
-    this.ctx = null;
+    this.stop()
+    window.removeEventListener('resize', this.resizeHandler)
+    this.callbacks.clear()
+    this.canvas = null
+    this.ctx = null
   }
 
-  /**
-   * Get the viewport instance
-   */
+  /* ------------------------------------------------------------------ */
+
   getViewport(): Viewport {
-    return this.viewport;
+    return this.viewport
   }
 
-  /**
-   * Register a render callback
-   * Callbacks are called in the render loop to draw shapes
-   */
-  addRenderCallback(callback: RenderCallback): () => void {
-    this.renderCallbacks.add(callback);
-    this.markDirty();
-    return () => {
-      this.renderCallbacks.delete(callback);
-      this.markDirty();
-    };
-  }
-
-  /**
-   * Mark the canvas as dirty (needs re-render)
-   */
-  markDirty(): void {
-    this.isDirty = true;
-  }
-
-  /**
-   * Get canvas size in screen pixels
-   */
   getCanvasSize(): CanvasSize {
-    if (!this.canvas) {
-      return { width: 0, height: 0 };
-    }
+    if (!this.canvas) return { width: 0, height: 0 }
     return {
       width: this.canvas.clientWidth,
       height: this.canvas.clientHeight,
-    };
-  }
-
-  /**
-   * Handle canvas resize and high-DPI scaling
-   */
-  private handleResize(): void {
-    if (!this.canvas || !this.ctx) return;
-
-    const rect = this.canvas.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-
-    // Set actual size in memory (scaled for device pixel ratio)
-    this.canvas.width = width * this.devicePixelRatio;
-    this.canvas.height = height * this.devicePixelRatio;
-
-    // Scale the canvas back down using CSS
-    this.canvas.style.width = `${width}px`;
-    this.canvas.style.height = `${height}px`;
-
-    // Scale the drawing context so everything draws at the correct size
-    this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio);
-
-    this.markDirty();
-  }
-
-  /**
-   * Start the requestAnimationFrame render loop
-   */
-  private startRenderLoop(): void {
-    const render = () => {
-      if (this.isDirty) {
-        this.render();
-        this.isDirty = false;
-      }
-      this.animationFrameId = requestAnimationFrame(render);
-    };
-    this.animationFrameId = requestAnimationFrame(render);
-  }
-
-  /**
-   * Stop the render loop
-   */
-  private stopRenderLoop(): void {
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
     }
   }
 
-  /**
-   * Main render function
-   * Called by requestAnimationFrame loop
-   */
-  private render(): void {
-    if (!this.ctx || !this.canvas) return;
+  /* ------------------------------------------------------------------ */
+  /* Callbacks                                                          */
+  /* ------------------------------------------------------------------ */
 
-    const size = this.getCanvasSize();
-
-    // Clear canvas
-    this.ctx.save();
-    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.fillRect(0, 0, size.width, size.height);
-    this.ctx.restore();
-
-    // Apply viewport transformation
-    const transform = this.viewport.getTransform();
-    this.ctx.setTransform(transform);
-
-    // Call all render callbacks to draw shapes
-    this.renderCallbacks.forEach(callback => {
-      this.ctx!.save();
-      try {
-        callback(this.ctx!);
-      } catch (error) {
-        console.error('Error in render callback:', error);
-      }
-      this.ctx!.restore();
-    });
+  addRenderCallback(cb: RenderCallback): () => void {
+    this.callbacks.add(cb)
+    return () => this.callbacks.delete(cb)
   }
 
-  /**
-   * Update viewport state and mark dirty
-   */
+  /* ------------------------------------------------------------------ */
+  /* Resize / DPI                                                       */
+  /* ------------------------------------------------------------------ */
+
+  private handleResize(): void {
+    if (!this.canvas || !this.ctx) return
+
+    const { width, height } = this.canvas.getBoundingClientRect()
+
+    this.canvas.width = Math.floor(width * this.dpr)
+    this.canvas.height = Math.floor(height * this.dpr)
+    this.canvas.style.width = `${width}px`
+    this.canvas.style.height = `${height}px`
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Render Loop                                                        */
+  /* ------------------------------------------------------------------ */
+
+  private start(): void {
+    const loop = () => {
+      this.render()
+      this.rafId = requestAnimationFrame(loop)
+    }
+    this.rafId = requestAnimationFrame(loop)
+  }
+
+  private stop(): void {
+    if (this.rafId !== null) cancelAnimationFrame(this.rafId)
+    this.rafId = null
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering                                                          */
+  /* ------------------------------------------------------------------ */
+
+  private render(): void {
+    if (!this.ctx || !this.canvas) return
+
+    const ctx = this.ctx
+    const { width, height } = this.getCanvasSize()
+
+    /* ---------- RESET ---------- */
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+
+    /* ---------- DPI SCALE ---------- */
+    ctx.scale(this.dpr, this.dpr)
+
+    /* ---------- CLEAR ---------- */
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, width, height)
+
+    /* ---------- VIEWPORT ---------- */
+    const vp = this.viewport.getTransform()
+    ctx.transform(vp.a, vp.b, vp.c, vp.d, vp.e, vp.f)
+
+    /* ---------- DEBUG GRID (TEMP) ---------- */
+    this.drawDebugGrid(ctx)
+
+    /* ---------- SHAPES ---------- */
+    for (const cb of this.callbacks) {
+      ctx.save()
+      cb(ctx)
+      ctx.restore()
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Debug                                                              */
+  /* ------------------------------------------------------------------ */
+
+  private drawDebugGrid(ctx: CanvasRenderingContext2D): void {
+    const size = 1000
+    ctx.strokeStyle = '#e5e7eb'
+    ctx.lineWidth = 1 / this.viewport.getZoom()
+
+    for (let x = -size; x <= size; x += 100) {
+      ctx.beginPath()
+      ctx.moveTo(x, -size)
+      ctx.lineTo(x, size)
+      ctx.stroke()
+    }
+
+    for (let y = -size; y <= size; y += 100) {
+      ctx.beginPath()
+      ctx.moveTo(-size, y)
+      ctx.lineTo(size, y)
+      ctx.stroke()
+    }
+
+    ctx.fillStyle = 'red'
+    ctx.beginPath()
+    ctx.arc(0, 0, 6 / this.viewport.getZoom(), 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  /* ------------------------------------------------------------------ */
+
   updateViewport(state: Partial<ViewportState>): void {
-    this.viewport.setState(state);
-    this.markDirty();
+    this.viewport.setState(state)
   }
 }

@@ -1,9 +1,9 @@
-function App() {
+import CanvasRoot from './canvas/CanvasRoot';
+
+export default function App() {
   return (
-    <div className="w-screen h-screen bg-gray-100">
-      <h1 className="text-2xl font-bold p-4">SketchBoard</h1>
+    <div className="w-screen h-screen relative overflow-hidden">
+      <CanvasRoot />
     </div>
   );
 }
-
-export default App;

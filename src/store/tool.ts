@@ -2,7 +2,7 @@
  * Tool State
  *
  * Zustand store for tool management.
- * Manages active tool selection and tool state.
+ * Manages active tool selection and tool instances.
  */
 
 import { create } from 'zustand';
@@ -12,7 +12,7 @@ import type { Tool } from '@/tools/types';
 interface ToolState {
   /** ID of the currently active tool */
   activeToolId: string | null;
-  /** Get the currently active tool instance */
+  /** Currently active tool instance */
   activeTool: Tool | null;
   /** Set the active tool by ID */
   setActiveTool: (toolId: string) => void;
@@ -32,8 +32,9 @@ export const useToolStore = create<ToolState>((set, get) => ({
 
   setActiveTool: (toolId: string) => {
     const tool = toolRegistry.get(toolId);
+
     if (!tool) {
-      console.warn(`Tool with ID "${toolId}" not found in registry`);
+      console.warn(`[ToolStore] Tool with ID "${toolId}" not found in registry`);
       return;
     }
 
@@ -51,12 +52,24 @@ export const useToolStore = create<ToolState>((set, get) => ({
 /**
  * Initialize default tool
  *
- * Sets the first available tool as active on startup.
+ * Safely activates the first registered tool.
+ * Idempotent, strict-mode safe, and hot-reload safe.
  */
 export function initializeDefaultTool(): void {
+  const state = useToolStore.getState();
+
+  // Do not override if already initialized
+  if (state.activeTool) {
+    return;
+  }
+
   const tools = toolRegistry.getAll();
   const firstTool = tools[0];
-  if (firstTool) {
-    useToolStore.getState().setActiveTool(firstTool.id);
+
+  if (!firstTool) {
+    console.warn('[ToolStore] No tools registered yet');
+    return;
   }
+
+  state.setActiveTool(firstTool.id);
 }

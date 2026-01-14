@@ -1,76 +1,51 @@
 /**
  * Tool Registry
  *
- * Central registry for all available tools.
- * Enables tool discovery and plugin-style architecture.
+ * Central registry for all tools.
+ * Tools MUST be registered here to be usable.
  */
 
 import type { Tool } from './types';
 import { createPenTool } from './pen';
-import { createSelectionTool } from './selection';
-import { createShapeTool } from './shape';
-import { createTextTool } from './text';
 
-/**
- * Tool Registry
- *
- * Maps tool IDs to tool instances.
- * Tools are registered at application startup.
- */
 class ToolRegistry {
-  private tools: Map<string, Tool> = new Map();
+  private tools = new Map<string, Tool>();
 
-  /**
-   * Register a tool
-   */
   register(tool: Tool): void {
+    if (this.tools.has(tool.id)) {
+      console.warn(`[ToolRegistry] Tool "${tool.id}" already registered`);
+      return;
+    }
     this.tools.set(tool.id, tool);
   }
 
-  /**
-   * Get a tool by ID
-   */
   get(toolId: string): Tool | undefined {
     return this.tools.get(toolId);
   }
 
-  /**
-   * Get all registered tools
-   */
   getAll(): Tool[] {
     return Array.from(this.tools.values());
   }
 
-  /**
-   * Check if a tool is registered
-   */
-  has(toolId: string): boolean {
-    return this.tools.has(toolId);
-  }
-
-  /**
-   * Get tool IDs
-   */
-  getIds(): string[] {
-    return Array.from(this.tools.keys());
+  clear(): void {
+    this.tools.clear();
   }
 }
 
-/**
- * Global tool registry instance
- */
 export const toolRegistry = new ToolRegistry();
 
 /**
- * Initialize default tools
- *
- * Registers all built-in tools.
- * Called at application startup.
+ * Initialize all built-in tools.
+ * MUST be called once before using ToolManager.
  */
 export function initializeTools(): void {
-  // Register all tools
-  toolRegistry.register(createSelectionTool());
+  toolRegistry.clear();
+
+  // Register tools here
   toolRegistry.register(createPenTool());
-  toolRegistry.register(createShapeTool());
-  toolRegistry.register(createTextTool());
+
+  console.log(
+    '[ToolRegistry] Registered tools:',
+    toolRegistry.getAll().map(t => t.id)
+  );
 }
