@@ -3,6 +3,7 @@
 **Purpose**: Centralized state management using Zustand.
 
 This module contains:
+
 - UI state (toolbar, panels, modals)
 - Canvas state (shapes, viewport)
 - Collaboration state (presence, sync status)

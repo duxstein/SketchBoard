@@ -3,6 +3,7 @@
 **Purpose**: Core rendering engine that operates independently of React lifecycle.
 
 This module contains:
+
 - Canvas renderer (Canvas API, not SVG)
 - World-to-screen coordinate transformations
 - RequestAnimationFrame render loop

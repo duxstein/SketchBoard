@@ -3,6 +3,7 @@
 **Purpose**: CRDT-based realtime synchronization layer.
 
 This module contains:
+
 - Yjs document management
 - WebSocket transport abstraction (provider-agnostic)
 - Presence system (cursors, users)

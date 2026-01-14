@@ -3,6 +3,7 @@
 **Purpose**: Shared utilities and helper functions.
 
 This module contains:
+
 - Math utilities (coordinate transformations, geometry)
 - Data utilities (shape serialization, validation)
 - ID generation

@@ -3,6 +3,7 @@
 **Purpose**: Minimal UI chrome that serves the canvas.
 
 This module contains:
+
 - Toolbar components
 - Minimal panels/overlays
 - Canvas container wrapper

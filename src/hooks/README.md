@@ -3,6 +3,7 @@
 **Purpose**: Custom React hooks for canvas, tools, and collaboration.
 
 This module contains:
+
 - Canvas hooks (viewport, rendering)
 - Tool hooks (active tool, tool state)
 - Collaboration hooks (presence, sync status)
