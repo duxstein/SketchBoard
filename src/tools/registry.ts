@@ -7,6 +7,9 @@
 
 import type { Tool } from './types';
 import { createPenTool } from './pen';
+import { createSelectionTool } from './selection';
+import { createShapeTool } from './shape';
+import { createTextTool } from './text';
 
 /**
  * Tool Registry
@@ -65,11 +68,9 @@ export const toolRegistry = new ToolRegistry();
  * Called at application startup.
  */
 export function initializeTools(): void {
-  // Register pen tool
+  // Register all tools
+  toolRegistry.register(createSelectionTool());
   toolRegistry.register(createPenTool());
-
-  // Additional tools will be registered here as they're implemented
-  // toolRegistry.register(createSelectionTool());
-  // toolRegistry.register(createShapeTool());
-  // toolRegistry.register(createTextTool());
+  toolRegistry.register(createShapeTool());
+  toolRegistry.register(createTextTool());
 }
